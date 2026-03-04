@@ -8,4 +8,12 @@ jobs:
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
-      - run: echo "CTO Review triggered for PR ${{ github.event.pull_request.number }}"
+        with:
+          fetch-depth: 0
+      - name: Run CTO Review Agent
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          /home/admin/.local/bin/agent -p --force --trust \
+            --workspace /home/admin/openclaw-dev-sandbox \
+            "[cursor-review] PR #${{ github.event.pull_request.number }} repo:AGI-Villa/openclaw-dev-sandbox url:${{ github.event.pull_request.html_url }} branch:${{ github.event.pull_request.head.ref }} see:skills/cursor-dev/SKILL.md"
