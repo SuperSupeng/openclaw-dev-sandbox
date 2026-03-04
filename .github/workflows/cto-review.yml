@@ -2,11 +2,11 @@ name: CTO Code Review
 
 on:
   pull_request:
-    types: [review_requested]
+    types: [labeled]
 
 jobs:
   cto-review:
-    if: github.event.requested_reviewer.login == 'darrencto'
+    if: github.event.label.name == 'cto-review'
     runs-on: self-hosted
 
     steps:
