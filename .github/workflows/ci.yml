@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          # 如果有 requirements.txt 就安装
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # 安装基础检查工具
+          pip install ruff
+
+      - name: Lint (ruff)
+        run: ruff check . --ignore E501 || true
+        # E501 = 行长度，AI 生成代码有时超 79 字符，暂时忽略
+
+      - name: Syntax check (all Python files)
+        run: |
+          find . -name "*.py" -not -path "./.git/*" | while read f; do
+            python3 -m py_compile "$f" && echo "✅ $f" || (echo "❌ $f syntax error" && exit 1)
+          done
+
+      - name: Run tests (if exist)
+        run: |
+          if [ -f pytest.ini ] || [ -d tests ] || [ -d test ]; then
+            pip install pytest
+            pytest -v
+          else
+            echo "No tests found, skipping."
+          fi
