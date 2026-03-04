@@ -51,3 +51,4 @@ python weather.py London
 - `feat/issue-<N>-<desc>` — 功能开发分支
 - `fix/issue-<N>-<desc>` — Bug 修复分支
 # trigger test 3 Thu Mar  5 00:14:52 CST 2026
+# label test Thu Mar  5 00:25:47 CST 2026
