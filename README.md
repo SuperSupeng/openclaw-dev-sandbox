@@ -52,3 +52,5 @@ python weather.py London
 - `fix/issue-<N>-<desc>` — Bug 修复分支
 # trigger test 3 Thu Mar  5 00:14:52 CST 2026
 test Thu Mar  5 09:12:38 CST 2026
+
+E2E CTO flow test: 2026-03-05T02:16:06Z
