@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片背景移除工具</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>图片背景移除工具</h1>
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <p>拖拽图片到这里或点击上传</p>
+            <input type="file" id="fileInput" accept="image/png, image/jpeg, image/webp">
+        </div>
+        <div class="progress-container" id="progressContainer" style="display: none;">
+            <div class="progress-bar" id="progressBar"></div>
+            <p>处理中...</p>
+        </div>
+        <div class="result-container" id="resultContainer" style="display: none;">
+            <div class="image-preview">
+                <img id="resultImage" alt="处理结果">
+            </div>
+            <button id="downloadBtn" class="download-btn">下载 PNG</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
