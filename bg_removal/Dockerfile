@@ -20,8 +20,6 @@ FROM base AS test
 RUN poetry install --with dev --no-interaction
 CMD ["pytest", "-v"]
 
-# ---- web stage ----
-FROM base AS web
-RUN chmod +x /app/start.sh
-EXPOSE 5000 8000
-CMD ["/app/start.sh"]
+# ---- runtime stage ----
+FROM base AS runtime
+ENTRYPOINT ["bg-remove"]

@@ -1,6 +1,6 @@
 # bg-removal — 图片背景移除工具
 
-基于 [rembg](https://github.com/danielgatis/rembg) 的图片背景移除 CLI 工具和 Web 界面。
+基于 [rembg](https://github.com/danielgatis/rembg) 的图片背景移除 CLI 工具。
 
 - 支持输入格式：PNG / JPG / WebP
 - 输出格式：PNG（带透明 Alpha 通道）
@@ -15,11 +15,8 @@
 # 测试镜像
 docker build --target test -t bg-removal-test .
 
-# 运行时镜像（CLI）
+# 运行时镜像
 docker build --target runtime -t bg-removal .
-
-# Web 界面镜像
-docker build --target web -t bg-removal-web .
 ```
 
 ### 运行测试
@@ -28,19 +25,10 @@ docker build --target web -t bg-removal-web .
 docker run --rm bg-removal-test
 ```
 
-### 移除背景（CLI）
+### 移除背景
 
 ```bash
 docker run --rm -v $(pwd)/images:/data bg-removal /data/input.jpg /data/output.png
-```
-
-### 启动 Web 界面
-
-```bash
-# 启动 Web 服务（默认端口 5000）
-docker run --rm -p 5000:5000 bg-removal-web
-
-# 访问 http://localhost:5000
 ```
 
 ## 本地开发（需要 Poetry）
@@ -66,18 +54,6 @@ poetry run bg-remove photo.webp result.png --alpha-matting
 poetry run bg-remove photo.jpg result.png --post-process-mask
 ```
 
-### Web 界面开发
-
-```bash
-# 启动 rembg HTTP 服务器
-poetry run rembg s
-
-# 在另一个终端中启动静态文件服务器
-python3 -m http.server 8000 --directory web
-
-# 访问 http://localhost:8000
-```
-
 ### 作为 Python 模块使用
 
 ```python
@@ -98,29 +74,17 @@ poetry run pytest -v
 ```
 bg_removal/
 ├── pyproject.toml        # Poetry 依赖配置
-├── Dockerfile            # 多阶段构建 (test / runtime / web)
+├── Dockerfile            # 多阶段构建 (test / runtime)
 ├── .dockerignore
 ├── README.md
 ├── bg_removal/
 │   ├── __init__.py
 │   ├── core.py           # 核心背景移除逻辑
 │   └── cli.py            # 命令行入口
-├── tests/
-│   ├── __init__.py
-│   └── test_core.py      # 单元测试
-└── web/
-    ├── index.html        # Web 界面入口
-    ├── style.css         # 样式表
-    └── script.js         # 前端逻辑
+└── tests/
+    ├── __init__.py
+    └── test_core.py      # 单元测试
 ```
-
-## Web 界面功能
-
-- 拖拽或点击上传图片
-- 实时显示处理进度和结果预览
-- 支持下载处理后的 PNG 图片
-- 响应式设计，适配桌面和移动设备
-- 复用现有的 rembg 后端实现
 
 ## 支持的模型
 
