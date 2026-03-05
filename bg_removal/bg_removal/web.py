@@ -82,7 +82,7 @@ def add_history_record(original_filename, processed_filename, file_size):
         "file_size": file_size
     }
     history.insert(0, record)  # 最新的在前面
-    
+
     # 限制历史记录数量
     if len(history) > MAX_HISTORY_RECORDS:
         removed = history[MAX_HISTORY_RECORDS:]
@@ -96,7 +96,7 @@ def add_history_record(original_filename, processed_filename, file_size):
                     logger.info(f"Removed old processed file: {r['processed_filename']}")
                 except Exception as e:
                     logger.error(f"Failed to remove old file {r['processed_filename']}: {e}")
-    
+
     save_history(history)
     return record
 
@@ -132,10 +132,10 @@ async def read_root():
 async def remove_background_api(file: UploadFile = File(...)):
     """
     Remove background from uploaded image file.
-    
+
     Args:
         file: Uploaded image file (PNG, JPG, or WebP)
-        
+
     Returns:
         Processed image with transparent background as PNG
     """
@@ -144,45 +144,45 @@ async def remove_background_api(file: UploadFile = File(...)):
     file_ext = os.path.splitext(file.filename)[1].lower()
     if file_ext not in valid_extensions:
         raise HTTPException(
-            status_code=400, 
+            status_code=400,
             detail=f"Invalid file type. Supported types: {', '.join(valid_extensions)}"
         )
-    
+
     # Validate file size (10MB limit)
     file.file.seek(0, 2)  # Seek to end
     file_size = file.file.tell()
     file.file.seek(0)  # Reset to beginning
-    
+
     if file_size > 10 * 1024 * 1024:  # 10MB
         raise HTTPException(status_code=400, detail="File size exceeds 10MB limit")
-    
+
     # 生成唯一的输出文件名
     output_filename = f"{uuid.uuid4()}.png"
     output_path = PROCESSED_DIR / output_filename
-    
+
     # 保存上传的文件到临时位置
     with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as temp_input:
         shutil.copyfileobj(file.file, temp_input)
         temp_input_path = temp_input.name
-    
+
     try:
         # 处理图片 - 注意 remove_background 需要 input 和 output 两个参数
         output_path = remove_background(temp_input_path, output_path)
-        
+
         # 保存到历史记录
         add_history_record(
             original_filename=file.filename,
             processed_filename=output_filename,
             file_size=file_size
         )
-        
+
         # 返回处理后的图片
         def iterfile():
             with open(output_path, "rb") as f:
                 yield from f
-        
+
         return StreamingResponse(
-            iterfile(), 
+            iterfile(),
             media_type="image/png",
             headers={"Content-Disposition": "attachment; filename=background-removed.png"}
         )
@@ -196,12 +196,12 @@ async def remove_background_api(file: UploadFile = File(...)):
 async def get_history():
     """获取历史记录列表"""
     history = load_history()
-    
+
     # 添加文件大小的人类可读格式和下载 URL
     for record in history:
         record["file_size_human"] = format_file_size(record["file_size"])
         record["download_url"] = f"/api/download/{record['processed_filename']}"
-    
+
     return {"history": history}
 
 
@@ -213,7 +213,7 @@ async def delete_history(record_id: str):
         uuid.UUID(record_id)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid record ID format. Must be a valid UUID.")
-    
+
     success = delete_history_record(record_id)
     if success:
         return {"message": "Deleted successfully"}
