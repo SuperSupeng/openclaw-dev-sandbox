@@ -169,7 +169,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // 下载历史记录中的文件
     async function downloadFile(filename, recordId) {
         try {
-            const response = await fetch(`/api/download/${filename}`);
+            // 文件名安全验证：只允许字母、数字、连字符和.png扩展名
+            if (!/^[a-zA-Z0-9-]+\.png$/.test(filename)) {
+                console.error('Invalid filename:', filename);
+                alert('下载失败：文件名无效');
+                return;
+            }
+            
+            const response = await fetch(`/api/download/${encodeURIComponent(filename)}`);
             if (!response.ok) throw new Error('Download failed');
             
             const blob = await response.blob();
@@ -224,10 +231,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!confirm('确定要清空所有历史记录吗？此操作不可恢复！')) return;
         
         try {
-            const history = await (await fetch('/api/history')).json();
-            for (const record of history.history) {
-                await fetch(`/api/history/${record.id}`, { method: 'DELETE' });
-            }
+            const response = await fetch('/api/history', { method: 'DELETE' });
+            if (!response.ok) throw new Error('Clear failed');
             await loadHistory();
         } catch (error) {
             console.error('Clear history failed:', error);

@@ -5,8 +5,17 @@ import os
 import sys
 import json
 import uuid
+import logging
+import shutil
 from datetime import datetime
 from pathlib import Path
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Add the parent directory to Python path to import core module
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -17,7 +26,6 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 import tempfile
-import shutil
 
 app = FastAPI(title="Background Removal API")
 
@@ -28,6 +36,9 @@ PROCESSED_DIR = DATA_DIR / "processed"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
 
+# 历史记录数量限制
+MAX_HISTORY_RECORDS = 100
+
 # 初始化历史记录文件
 if not HISTORY_FILE.exists():
     HISTORY_FILE.write_text("[]")
@@ -37,13 +48,28 @@ def load_history():
     try:
         with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
-    except (json.JSONDecodeError, FileNotFoundError):
+    except FileNotFoundError:
+        logger.info("History file not found, creating new history")
+        return []
+    except json.JSONDecodeError as e:
+        logger.error(f"History file JSON decode error: {e}")
+        # 备份损坏的文件
+        backup_file = HISTORY_FILE.with_suffix('.json.corrupted')
+        try:
+            shutil.copy2(HISTORY_FILE, backup_file)
+            logger.warning(f"Corrupted history file backed up to {backup_file}")
+        except Exception as backup_err:
+            logger.error(f"Failed to backup corrupted history file: {backup_err}")
         return []
 
 def save_history(history):
     """保存历史记录"""
-    with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
-        json.dump(history, f, ensure_ascii=False, indent=2)
+    try:
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(history, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error(f"Failed to save history: {e}")
+        raise
 
 def add_history_record(original_filename, processed_filename, file_size):
     """添加历史记录"""
@@ -56,6 +82,21 @@ def add_history_record(original_filename, processed_filename, file_size):
         "file_size": file_size
     }
     history.insert(0, record)  # 最新的在前面
+    
+    # 限制历史记录数量
+    if len(history) > MAX_HISTORY_RECORDS:
+        removed = history[MAX_HISTORY_RECORDS:]
+        history = history[:MAX_HISTORY_RECORDS]
+        # 删除超出的记录对应的文件
+        for r in removed:
+            processed_path = PROCESSED_DIR / r["processed_filename"]
+            if processed_path.exists():
+                try:
+                    processed_path.unlink()
+                    logger.info(f"Removed old processed file: {r['processed_filename']}")
+                except Exception as e:
+                    logger.error(f"Failed to remove old file {r['processed_filename']}: {e}")
+    
     save_history(history)
     return record
 
@@ -167,6 +208,12 @@ async def get_history():
 @app.delete("/api/history/{record_id}")
 async def delete_history(record_id: str):
     """删除指定历史记录"""
+    # 验证 record_id 是否为有效的 UUID 格式
+    try:
+        uuid.UUID(record_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid record ID format. Must be a valid UUID.")
+    
     success = delete_history_record(record_id)
     if success:
         return {"message": "Deleted successfully"}
@@ -184,6 +231,29 @@ async def download_file(filename: str):
         media_type="image/png",
         filename=f"background-removed-{filename[:8]}.png"
     )
+
+
+@app.delete("/api/history")
+async def clear_all_history():
+    """清空所有历史记录（批量删除）"""
+    try:
+        history = load_history()
+        # 删除所有处理后的图片文件
+        for record in history:
+            processed_path = PROCESSED_DIR / record["processed_filename"]
+            if processed_path.exists():
+                try:
+                    processed_path.unlink()
+                    logger.info(f"Removed processed file: {record['processed_filename']}")
+                except Exception as e:
+                    logger.error(f"Failed to remove file {record['processed_filename']}: {e}")
+        # 清空历史记录
+        save_history([])
+        logger.info("All history cleared successfully")
+        return {"message": "All history cleared successfully"}
+    except Exception as e:
+        logger.error(f"Failed to clear history: {e}")
+        raise HTTPException(status_code=500, detail="Failed to clear history")
 
 
 def format_file_size(size_bytes):
